@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 def get_credential():
     """
     Get the appropriate credential for Azure authentication with fallbacks.
-    This function prioritizes container-friendly authentication methods.
+    This function prioritizes user authentication methods over managed identity.
 
     Returns:
         An Azure credential object that can be used for authentication
@@ -49,33 +49,34 @@ def get_credential():
     logger.info("Attempting to create credential chain for Azure authentication")
 
     try:
-        # In container environments, Managed Identity is often the best option
-        # Then fall back to environment variables, and finally CLI
+        # Prioritize user authentication methods:
+        # 1. Azure CLI credentials (user logged in)
+        # 2. Environment variables (user-provided)
+        # 3. Managed Identity as fallback
         credential = ChainedTokenCredential(
-            ManagedIdentityCredential(),
+            AzureCliCredential(),
             EnvironmentCredential(),
-            AzureCliCredential()
+            ManagedIdentityCredential()
         )
-        logger.info("Successfully created credential chain")
+        logger.info("Successfully created user-prioritized credential chain")
         return credential
     except Exception as e:
         logger.warning(f"Failed to create credential chain: {str(e)}")
-        logger.info("Falling back to DefaultAzureCredential with CLI disabled")
+        logger.info("Falling back to DefaultAzureCredential with user auth priority")
 
-        # If chained credential fails, try DefaultAzureCredential with CLI disabled
-        # This is useful in containers where CLI isn't available
+        # If chained credential fails, try DefaultAzureCredential with user auth enabled
         try:
-            credential = DefaultAzureCredential(exclude_cli_credential=True)
+            credential = DefaultAzureCredential(exclude_managed_identity_credential=False)
             logger.info(
-                "Successfully created DefaultAzureCredential with CLI disabled")
+                "Successfully created DefaultAzureCredential with user auth priority")
             return credential
         except Exception as e2:
             logger.warning(
                 f"Failed to create DefaultAzureCredential: {str(e2)}")
 
-            # Last resort - try environment only
-            logger.info("Falling back to EnvironmentCredential only")
-            return EnvironmentCredential()
+            # Last resort - try CLI only
+            logger.info("Falling back to AzureCliCredential only")
+            return AzureCliCredential()
 
 # ----------------------------------------------------------
 # Helper function to ensure objects are JSON serializable
