@@ -35,8 +35,8 @@ class ToolProperty:
 
 
 # Tool properties for agent functions
-tool_properties_subscription_ids = [
-    ToolProperty("subscription_ids", "array", "List of Azure subscription IDs to query Azure Resource Manager against", "string"),
+tool_properties_subscription_id = [
+    ToolProperty("subscription_id", "string", "Azure subscription ID to query Azure Resource Manager against"),
 ]
 
 tool_properties_log_analytics = [
@@ -51,7 +51,7 @@ tool_properties_log_analytics_with_server = [
 ]
 
 # Convert agent function tool properties to JSON
-tool_properties_subscription_ids_json = json.dumps([prop.to_dict() for prop in tool_properties_subscription_ids])
+tool_properties_subscription_id_json = json.dumps([prop.to_dict() for prop in tool_properties_subscription_id])
 tool_properties_log_analytics_json = json.dumps([prop.to_dict() for prop in tool_properties_log_analytics])
 tool_properties_log_analytics_with_server_json = json.dumps([prop.to_dict() for prop in tool_properties_log_analytics_with_server])
 
@@ -61,7 +61,7 @@ tool_properties_log_analytics_with_server_json = json.dumps([prop.to_dict() for 
     type="mcpToolTrigger",
     toolName="GetServerMetadata",
     description="Retrieve the server infrastructure configuration",
-    toolProperties=tool_properties_subscription_ids_json,
+    toolProperties=tool_properties_subscription_id_json,
 )
 def get_server_metadata_function(context) -> str:
     """
@@ -75,10 +75,10 @@ def get_server_metadata_function(context) -> str:
     """
     try:
         content = json.loads(context)
-        subscription_ids = content["arguments"]["subscription_ids"]
+        subscription_id = content["arguments"]["subscription_id"]
         
         # Call the agent function
-        result = GetServerMetadata(subscription_ids)
+        result = GetServerMetadata(subscription_id)
         return result
     except Exception as e:
         logging.error(f"Error in get_server_metadata_function: {str(e)}")
@@ -90,7 +90,7 @@ def get_server_metadata_function(context) -> str:
     type="mcpToolTrigger",
     toolName="GetSqlMetadata",
     description="Retrieve the SQL infrastructure configuration",
-    toolProperties=tool_properties_subscription_ids_json,
+    toolProperties=tool_properties_subscription_id_json,
 )
 def get_sql_metadata_function(context) -> str:
     """
@@ -104,10 +104,10 @@ def get_sql_metadata_function(context) -> str:
     """
     try:
         content = json.loads(context)
-        subscription_ids = content["arguments"]["subscription_ids"]
+        subscription_id = content["arguments"]["subscription_id"]
         
         # Call the agent function
-        result = GetSqlMetadata(subscription_ids)
+        result = GetSqlMetadata(subscription_id)
         return result
     except Exception as e:
         logging.error(f"Error in get_sql_metadata_function: {str(e)}")
@@ -119,7 +119,7 @@ def get_sql_metadata_function(context) -> str:
     type="mcpToolTrigger",
     toolName="GetPatchingLevel",
     description="Retrieve the missed patches list for the ServeName",
-    toolProperties=tool_properties_subscription_ids_json,
+    toolProperties=tool_properties_subscription_id_json,
 )
 def get_patching_level_function(context) -> str:
     """
@@ -133,10 +133,10 @@ def get_patching_level_function(context) -> str:
     """
     try:
         content = json.loads(context)
-        subscription_ids = content["arguments"]["subscription_ids"]
+        subscription_id = content["arguments"]["subscription_id"]
         
         # Call the agent function
-        result = GetPatchingLevel(subscription_ids)
+        result = GetPatchingLevel(subscription_id)
         return result
     except Exception as e:
         logging.error(f"Error in get_patching_level_function: {str(e)}")

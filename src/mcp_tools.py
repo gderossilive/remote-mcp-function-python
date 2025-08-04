@@ -122,18 +122,21 @@ def ensure_serializable(obj):
 # Note: These functions need to be registered with an MCP server instance
 
 @log_function_call
-def resource_graph_tool(query: str, subscription_ids: List[str] = None):
+def resource_graph_tool(query: str, subscription_id: str = None):
     """Run a KQL query on Azure Resource Graph."""
     logger.debug(f"Running Resource Graph query: {query}")
     # sys.stderr.write("🔧 TOOL CALL: resource_graph_tool\n")
     # sys.stderr.flush()
 
     try:
-        # If subscription_ids not provided, use the one from environment variables
-        if not subscription_ids:
-            subscription_ids = [os.getenv("SUBSCRIPTION_ID")]
+        # If subscription_id not provided, use the one from environment variables
+        if not subscription_id:
+            subscription_id = os.getenv("SUBSCRIPTION_ID")
             logger.info(
-                f"Using subscription ID from environment: {subscription_ids}")
+                f"Using subscription ID from environment: {subscription_id}")
+
+        # Convert single subscription_id to list for the ResourceGraphTool
+        subscription_ids = [subscription_id]
 
         # Get the appropriate credential for the environment
         credential = get_credential()
@@ -205,39 +208,32 @@ def log_analytics_tool(query: str, workspace_id: str, timespan: str = None):
 
 
 @log_function_call
-def GetPatchingLevel(subscription_ids) -> str:
+def GetPatchingLevel(subscription_id: str) -> str:
     """Retrieve the missed patches list by ServeName. This action provides the following metadata for missed patches: 
     Name, KB, Classification, Published Date, Reboot Behavior and Severity.
 
     Arguments:
-    subscription_ids (List[str]): List of Azure subscription IDs to query Azure Resource Manager against.
+    subscription_id (str): Azure subscription ID to query Azure Resource Manager against.
 
     Returns (str): 
     The list of the missing patch for all the virtual machines in the environment in JSON format.
     """
     # logger.info("GetServerMetadata: Starting to get the server metadata")
-    logger.debug(f"GetPatchingLevel: Subscription IDs: {subscription_ids}")
+    logger.debug(f"GetPatchingLevel: Subscription ID: {subscription_id}")
     sys.stderr.write("🔧 TOOL CALL: GetPatchingLevel\n")
     sys.stderr.flush()
 
     # get the subscription ID from the environment variable
     # subscription_id = os.environ.get("SUBSCRIPTION_ID")
 
-    # check if the subscription_ids is different from None or a List
-    if isinstance(subscription_ids, str):
-        logger.info(
-            "GetPatchingLevel: subscription_ids is a string, converting to list")
-        subscription_ids = [subscription_ids]
-    elif isinstance(subscription_ids, list):
-        logger.info("GetPatchingLevel: subscription_ids is a list")
-    else:
-        logger.error(
-            "GetPatchingLevel: subscription_ids is not a string or a list")
-        return json.dumps({"error": "subscription_ids is not a string or a list"})
+    # check if the subscription_id is provided
+    if not subscription_id:
+        logger.error("GetPatchingLevel: subscription_id is required")
+        return json.dumps({"error": "subscription_id is required"})
 
     kql_query = "patchassessmentresources | where type == 'microsoft.hybridcompute/machines/patchassessmentresults/softwarepatches'| project ServerName= extract(@'/machines/([^/]+)/', 1, id), MissedPatch=properties"
 
-    response = resource_graph_tool(kql_query, subscription_ids)
+    response = resource_graph_tool(kql_query, subscription_id)
     if not response:
         logger.error("GetPatchingLevel: No response from Resource Graph Tool")
         return json.dumps({"error": "No response from Resource Graph Tool"})
@@ -247,7 +243,7 @@ def GetPatchingLevel(subscription_ids) -> str:
 
 
 @log_function_call
-def GetSqlMetadata(subscription_ids) -> str:
+def GetSqlMetadata(subscription_id: str) -> str:
     """Retrieve the SQL infrastructure configuration. 
     The infrastructure is composed by SQL Servers/instances, every SQL Server/instance could have multiple SQL databases. 
     You are able to retrieve following metadata: Database name (DbName), SQL Server name (SrvName), cores used by the server (SrvvCore), 
@@ -256,7 +252,7 @@ def GetSqlMetadata(subscription_ids) -> str:
     information about database backup (DbBackupInformation).
 
     Arguments:
-    subscription_ids (List[str]): List of Azure subscription IDs to query Azure Resource Manager against.
+    subscription_id (str): Azure subscription ID to query Azure Resource Manager against.
 
     Returns (str): 
     SQL infrastructure configuration is composed by the following metadata: Database name (DbName), 
@@ -266,28 +262,21 @@ def GetSqlMetadata(subscription_ids) -> str:
     information about database backup (DbBackupInformation) in JSON format.
     """
     # logger.info("GetServerMetadata: Starting to get the server metadata")
-    logger.debug(f"GetSqlMetadata: Subscription IDs: {subscription_ids}")
+    logger.debug(f"GetSqlMetadata: Subscription ID: {subscription_id}")
     sys.stderr.write("🔧 TOOL CALL: GetSqlMetadata\n")
     sys.stderr.flush()
 
     # get the subscription ID from the environment variable
     # subscription_id = os.environ.get("SUBSCRIPTION_ID")
 
-    # check if the subscription_ids is different from None or a List
-    if isinstance(subscription_ids, str):
-        logger.info(
-            "GetSqlMetadata: subscription_ids is a string, converting to list")
-        subscription_ids = [subscription_ids]
-    elif isinstance(subscription_ids, list):
-        logger.info("GetSqlMetadata: subscription_ids is a list")
-    else:
-        logger.error(
-            "GetSqlMetadata: subscription_ids is not a string or a list")
-        return json.dumps({"error": "subscription_ids is not a string or a list"})
+    # check if the subscription_id is provided
+    if not subscription_id:
+        logger.error("GetSqlMetadata: subscription_id is required")
+        return json.dumps({"error": "subscription_id is required"})
 
     kql_query = "resources | where type =~ 'microsoft.azurearcdata/sqlserverinstances' | project id, SrvName=name, SrvVersion=tostring(properties['version']), SrvLicenseType=tostring(properties['licenseType']), SrvEdition=tostring(properties['edition']), SrvvCore=toint(properties['vCore']) | join kind=leftouter (resources | where type =~'microsoft.azurearcdata/sqlserverinstances/databases' | project id,DbName=name, DatabaseOptions=properties['databaseOptions'], DbBackupInformation=properties['backupInformation'],DbSpaceAvailableMB=toint(properties['spaceAvailableMB']), DbSizeMB=toint(properties['sizeMB']) | extend ServerId=tostring(parse_path(tostring(parse_path(['id'])['DirectoryPath'])) ['DirectoryPath']) ) on $left.id == $right.ServerId | project-away id, id1"
 
-    response = resource_graph_tool(kql_query, subscription_ids)
+    response = resource_graph_tool(kql_query, subscription_id)
     if not response:
         logger.error("GetSqlMetadata: No response from Resource Graph Tool")
         return json.dumps({"error": "No response from Resource Graph Tool"})
@@ -297,7 +286,7 @@ def GetSqlMetadata(subscription_ids) -> str:
 
 
 @log_function_call
-def GetServerMetadata(subscription_ids) -> str:
+def GetServerMetadata(subscription_id: str) -> str:
     """Retrieve the server infrastructure configuration. 
     The infrastructure could be composed by Windows Servers and/or Linux Servers. 
     You are able to retrieve following metadata: Server name (name), hybrid or native Azure server (type), 
@@ -306,7 +295,7 @@ def GetServerMetadata(subscription_ids) -> str:
     subnet used by vm (subnet), Whether SQL Server is installed on the server (mssqlDiscovered). 
 
     Arguments:
-        subscription_ids (List[str]): List of Azure subscription IDs to query Azure Resource Manager against.
+        subscription_id (str): Azure subscription ID to query Azure Resource Manager against.
 
     Returns (str): 
         The server infrastructure configuration is composed by the following metadata: Server name (name), 
@@ -315,7 +304,7 @@ def GetServerMetadata(subscription_ids) -> str:
         subnet used by vm (subnet), if SQL is installed on vm (mssqlDiscovered) in JSON format.
     """
     # logger.info("GetServerMetadata: Starting to get the server metadata")
-    logger.debug(f"GetServerMetadata: Subscription IDs: {subscription_ids}")
+    logger.debug(f"GetServerMetadata: Subscription ID: {subscription_id}")
     sys.stderr.write("🔧 TOOL CALL: GetServerMetadata\n")
     sys.stderr.flush()
     logger.info("TOOL: GetServerMetadata", extra={
@@ -326,21 +315,14 @@ def GetServerMetadata(subscription_ids) -> str:
     # get the subscription ID from the environment variable
     # subscription_id = os.environ.get("SUBSCRIPTION_ID")
 
-    # check if the subscription_ids is different from None or a List
-    if isinstance(subscription_ids, str):
-        logger.info(
-            "GetServerMetadata: subscription_ids is a string, converting to list")
-        subscription_ids = [subscription_ids]
-    elif isinstance(subscription_ids, list):
-        logger.info("GetServerMetadata: subscription_ids is a list")
-    else:
-        logger.error(
-            "GetServerMetadata: subscription_ids is not a string or a list")
-        return json.dumps({"error": "subscription_ids is not a string or a list"})
+    # check if the subscription_id is provided
+    if not subscription_id:
+        logger.error("GetServerMetadata: subscription_id is required")
+        return json.dumps({"error": "subscription_id is required"})
 
     kql_query = "resources | where type == 'microsoft.hybridcompute/machines' | project name, type, location, resourceGroup, OsVersion=properties.osSku, processor=properties.detectedProperties.processorNames , coreCount=properties.detectedProperties.logicalCoreCount, RamGB=properties.detectedProperties.totalPhysicalMemoryInGigabytes, subnet=properties.networkProfile.networkInterfaces[0].ipAddresses[0].address, mssqlDiscovered=properties.mssqlDiscovered"
 
-    response = resource_graph_tool(kql_query, subscription_ids)
+    response = resource_graph_tool(kql_query, subscription_id)
     if not response:
         logger.error("GetServerMetadata: No response from Resource Graph Tool")
         return json.dumps({"error": "No response from Resource Graph Tool"})
