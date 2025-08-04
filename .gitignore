@@ -178,3 +178,40 @@ cython_debug/
 
 # Application logs
 logs/*.log
+
+# Azure Functions specific
+bin
+obj
+csx
+.vs
+edge
+Publish
+*.user
+*.suo
+*.cscfg
+*.Cache
+project.lock.json
+/packages
+/TestResults
+/tools/NuGet.exe
+/App_Data
+/secrets
+/data
+.secrets
+appsettings.json
+node_modules
+dist
+
+# Azure Functions local settings
+local.settings.json
+
+# HTTP test files with potentially sensitive data
+test.http
+
+# Local python packages
+.python_packages/
+
+# Azurite artifacts
+__blobstorage__
+__queuestorage__
+__azurite_db*__.json
