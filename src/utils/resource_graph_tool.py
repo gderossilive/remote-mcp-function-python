@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 class ResourceGraphTool:
     """Tool for executing KQL queries on Azure Resource Graph."""
     
-    def __init__(self):
-        # Use DefaultAzureCredential which supports multiple authentication methods
+    def __init__(self, credential=None):
+        # Use provided credential or default to AzureCliCredential
         logger.info("Initializing ResourceGraphTool")
-        self.credential = AzureCliCredential()
+        self.credential = credential if credential else AzureCliCredential()
         self.client = ResourceGraphClient(self.credential)
 
     @log_method_call

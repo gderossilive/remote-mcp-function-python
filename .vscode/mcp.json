@@ -19,6 +19,10 @@
             "headers": {
                 "x-functions-key": "${input:functions-mcp-extension-system-key}"
             }
+        },
+        "local-mcp-function": {
+            "type": "sse",
+            "url": "http://localhost:7071/runtime/webhooks/mcp/sse"
         }
     }
 }

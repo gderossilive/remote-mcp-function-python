@@ -107,7 +107,7 @@ For local development, the infrastructure analysis tools require Azure CLI authe
 1. **Add MCP Server** from command palette and add URL to your running Function app's SSE endpoint:
 
     ```shell
-    http://0.0.0.0:7071/runtime/webhooks/mcp/sse
+    http://localhost:7071/runtime/webhooks/mcp/sse
     ```
 
 1. **List MCP Servers** from command palette and start the server
@@ -115,40 +115,40 @@ For local development, the infrastructure analysis tools require Azure CLI authe
 
     **Server Infrastructure Analysis:**
     ```plaintext
-    Get server metadata for subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    Get server metadata for subscription your-subscription-id
     ```
 
     **SQL Infrastructure Analysis:**
     ```plaintext
-    Analyze SQL infrastructure configuration for subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    Analyze SQL infrastructure configuration for subscription your-subscription-id
     ```
 
     **Patch Management:**
     ```plaintext
-    Check for missing patches on all servers in subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    Check for missing patches on all servers in subscription your-subscription-id
     ```
 
     **Best Practices Assessment:**
     ```plaintext
-    Run SQL best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e for the last 30 days
+    Run SQL best practices assessment on workspace your-log-analytics-workspace-id for the last 30 days
     ```
 
     ```plaintext
-    Perform Windows Server best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    Perform Windows Server best practices assessment on workspace your-log-analytics-workspace-id
     ```
 
     **Software Configuration Tracking:**
     ```plaintext
-    Show software configuration for server WIN-SERVER01 in workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    Show software configuration for server YOUR-SERVER-NAME in workspace your-log-analytics-workspace-id
     ```
 
     ```plaintext
-    Track software changes for server WIN-SERVER01 in the last 7 days using workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    Track software changes for server YOUR-SERVER-NAME in the last 7 days using workspace your-log-analytics-workspace-id
     ```
 
     **Anomaly Detection:**
     ```plaintext
-    Detect performance anomalies in workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e for the last 7 days
+    Detect performance anomalies in workspace your-log-analytics-workspace-id for the last 7 days
     ```
 
 1. When prompted to run the tool, consent by clicking **Continue**
@@ -168,7 +168,7 @@ For local development, the infrastructure analysis tools require Azure CLI authe
 4. Set the URL to your running Function app's SSE endpoint and **Connect**:
 
     ```shell
-    http://0.0.0.0:7071/runtime/webhooks/mcp/sse
+    http://localhost:7071/runtime/webhooks/mcp/sse
     ```
 
 >**Note** this step will not work in CodeSpaces.  Please move on to Deploy to Remote MCP.  
@@ -237,37 +237,40 @@ For GitHub Copilot within VS Code, you should instead set the key as the `x-func
         },
         "local-mcp-function": {
             "type": "sse",
-            "url": "http://0.0.0.0:7071/runtime/webhooks/mcp/sse"
+            "url": "http://localhost:7071/runtime/webhooks/mcp/sse"
         }
     }
 }
 ```
 
-For MCP Inspector, you can include the key in the URL: `https://<funcappname>.azurewebsites.net/runtime/webhooks/mcp/sse?code=<your-mcp-extension-system-key>`.
+## Deployment Status and Current Configuration
 
-For GitHub Copilot within VS Code, you should instead set the key as the `x-functions-key` header in `mcp.json`, and you would just use `https://<funcappname>.azurewebsites.net/runtime/webhooks/mcp/sse` for the URL. The following example uses an input and will prompt you to provide the key when you start the server from VS Code:
+The template can be deployed and configured with details similar to the following example:
 
-```json
-{
-    "inputs": [
-        {
-            "type": "promptString",
-            "id": "functions-mcp-extension-system-key",
-            "description": "Azure Functions MCP Extension System Key",
-            "password": true
-        }
-    ],
-    "servers": {
-        "my-mcp-server": {
-            "type": "sse",
-            "url": "<funcappname>.azurewebsites.net/runtime/webhooks/mcp/sse",
-            "headers": {
-                "x-functions-key": "${input:functions-mcp-extension-system-key}"
-            }
-        }
-    }
-}
-```
+- **Function App Name**: `func-api-example123`
+- **Resource Group**: `rg-MyMCPProject-REGION`
+- **Location**: `East US` (or your preferred region)
+- **Subscription**: `your-subscription-id`
+
+### Remote MCP Server Endpoints:
+- **Production URL**: `https://your-function-app-name.azurewebsites.net/runtime/webhooks/mcp/sse`
+- **Local Development URL**: `http://localhost:7071/runtime/webhooks/mcp/sse`
+
+### Available MCP Tools (8 total):
+✅ **get_server_metadata_function** - Server infrastructure analysis  
+✅ **get_sql_metadata_function** - SQL Server configuration analysis  
+✅ **get_patching_level_function** - Patch management and security updates  
+✅ **get_sql_bp_assessment_function** - SQL Server best practices assessment  
+✅ **get_win_bp_assessment_function** - Windows Server best practices assessment  
+✅ **get_sw_config_function** - Software configuration tracking  
+✅ **get_sw_changes_list_function** - Software change monitoring  
+✅ **get_anomalies_function** - Performance anomaly detection  
+
+### Recent Fixes Applied:
+- ✅ **JSON Schema Validation**: Fixed MCP tool parameter validation errors by properly defining array type schemas with `items` specification
+- ✅ **Authentication**: Updated ResourceGraphTool to support credential injection for better Azure authentication
+- ✅ **Code Consolidation**: Migrated from `agent_functions.py` to comprehensive `mcp_tools.py` implementation
+- ✅ **Deployment**: Successfully deployed to Azure with proper function bindings and MCP integration
 
 ## Redeploy your code
 
@@ -290,12 +293,15 @@ Once your application is deployed, you can use these commands to manage and moni
 
 ```bash
 # Get your function app name from the environment file
-FUNCTION_APP_NAME=$(cat .azure/$(cat .azure/config.json | jq -r '.defaultEnvironment')/env.json | jq -r '.FUNCTION_APP_NAME')
+FUNCTION_APP_NAME=$(cat .azure/$(cat .azure/config.json | jq -r '.defaultEnvironment')/.env | grep AZURE_FUNCTION_NAME | cut -d= -f2 | tr -d '"')
 echo $FUNCTION_APP_NAME
 
 # Get resource group 
-RESOURCE_GROUP=$(cat .azure/$(cat .azure/config.json | jq -r '.defaultEnvironment')/env.json | jq -r '.AZURE_RESOURCE_GROUP')
+RESOURCE_GROUP=$(cat .azure/$(cat .azure/config.json | jq -r '.defaultEnvironment')/.env | grep RESOURCE_GROUP | cut -d= -f2 | tr -d '"')
 echo $RESOURCE_GROUP
+
+# Get the MCP extension system key
+az functionapp keys list --resource-group $RESOURCE_GROUP --name $FUNCTION_APP_NAME --query "systemKeys.mcp_extension" -o tsv
 
 # View function app logs
 az webapp log tail --name $FUNCTION_APP_NAME --resource-group $RESOURCE_GROUP
@@ -392,7 +398,15 @@ Note that the `host.json` file also includes a reference to the experimental bun
 
 ## Changelog
 
-### August 4, 2025
+### August 4, 2025 - Latest Updates
+- **JSON Schema Validation Fix**: Resolved MCP tool validation errors by implementing proper array type definitions with `items` specification in tool properties
+- **Authentication Enhancement**: Updated ResourceGraphTool class to support credential injection for improved Azure authentication flexibility
+- **Code Architecture Improvement**: Successfully migrated from legacy `agent_functions.py` to consolidated `mcp_tools.py` with all 8 infrastructure analysis tools
+- **Deployment Optimization**: Completed successful Azure deployment with automated resource provisioning
+- **MCP Configuration**: Enhanced `.vscode/mcp.json` to support both local and remote MCP server configurations
+- **Documentation Update**: Comprehensive README refresh with current deployment details, connection examples, and troubleshooting guidance
+
+### August 4, 2025 - Core Template Updates
 - **Focused on Azure Infrastructure Analysis**: Streamlined the template to focus exclusively on powerful Azure infrastructure monitoring and analysis tools
 - **Enhanced MCP Tool Suite**: Now includes 8 comprehensive MCP tools for infrastructure analysis:
   - Server metadata and configuration analysis

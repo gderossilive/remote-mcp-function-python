@@ -12,22 +12,31 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 
 class ToolProperty:
-    def __init__(self, property_name: str, property_type: str, description: str):
+    def __init__(self, property_name: str, property_type: str, description: str, items_type: str = None):
         self.propertyName = property_name
         self.propertyType = property_type
         self.description = description
+        self.itemsType = items_type
 
     def to_dict(self):
-        return {
+        result = {
             "propertyName": self.propertyName,
             "propertyType": self.propertyType,
             "description": self.description,
         }
+        
+        # For array types, we need to specify the items property
+        if self.propertyType == "array" and self.itemsType:
+            result["items"] = {
+                "type": self.itemsType
+            }
+        
+        return result
 
 
 # Tool properties for agent functions
 tool_properties_subscription_ids = [
-    ToolProperty("subscription_ids", "array", "List of Azure subscription IDs to query Azure Resource Manager against"),
+    ToolProperty("subscription_ids", "array", "List of Azure subscription IDs to query Azure Resource Manager against", "string"),
 ]
 
 tool_properties_log_analytics = [
