@@ -18,7 +18,7 @@ urlFragment: remote-mcp-functions-python
 
 This is a quickstart template to easily build and deploy a custom remote MCP server to the cloud using Azure Functions with Python. You can clone/restore/run on your local machine with debugging, and `azd up` to have it in the cloud in a couple minutes. The MCP server is secured by design using keys and HTTPS, and allows more options for OAuth using built-in auth and/or [API Management](https://aka.ms/mcp-remote-apim-auth) as well as network isolation using VNET.
 
-**Updated August 4, 2025**: This template now includes advanced Azure infrastructure analysis tools with integrated MCP agent functions for server monitoring, SQL analysis, patch management, best practices assessment, and anomaly detection.
+**Updated August 4, 2025**: This template focuses on advanced Azure infrastructure analysis tools with integrated MCP functions for server monitoring, SQL analysis, patch management, Windows and SQL best practices assessment, software configuration tracking, and performance anomaly detection.
 
 If you're looking for this sample in more languages check out the [.NET/C#](https://github.com/Azure-Samples/remote-mcp-functions-dotnet) and [Node.js/TypeScript](https://github.com/Azure-Samples/remote-mcp-functions-typescript) versions.
 
@@ -39,25 +39,23 @@ Below is the architecture diagram for the Remote MCP Server using Azure Function
 
 ## Available MCP Tools
 
-This template includes several powerful MCP tools for Azure infrastructure analysis:
+This template includes powerful MCP tools for comprehensive Azure infrastructure analysis:
 
-### Basic Tools
-- **hello_mcp** - Simple greeting function for testing connectivity
-- **get_snippet** - Retrieve code snippets stored in Azure Blob Storage
-- **save_snippet** - Save code snippets to Azure Blob Storage
-
-### Azure Infrastructure Analysis Tools (New!)
-- **GetServerMetadata** - Retrieve comprehensive server infrastructure configuration including OS version, CPU details, memory, and network information
-- **GetSqlMetadata** - Analyze SQL Server infrastructure including database configurations, licensing, storage usage, and backup information
-- **GetPatchingLevel** - Identify missing patches and security updates across your server infrastructure with detailed metadata
-- **GetSqlBpAssessment** - Run SQL Server best practices assessment to identify configuration issues and improvement opportunities
+### Azure Infrastructure Analysis Tools
+- **GetServerMetadata** - Retrieve comprehensive server infrastructure configuration including OS version, CPU details, memory, network information, and SQL Server discovery status
+- **GetSqlMetadata** - Analyze SQL Server infrastructure including database configurations, licensing, storage usage, and backup information  
+- **GetPatchingLevel** - Identify missing patches and security updates across your server infrastructure with detailed metadata including KB numbers, severity, and reboot requirements
+- **GetSqlBpAssessment** - Run SQL Server best practices assessment to identify configuration issues and improvement opportunities with detailed recommendations
+- **GetWinBpAssessment** - Perform Windows Server best practices assessment to identify infrastructure issues and provide remediation recommendations
+- **GetSwConfig** - Retrieve detailed software configuration for specific servers including installed applications, versions, and publishers
+- **GetSwChangesList** - Track software configuration changes over time for specific servers to identify when applications were installed, updated, or removed
 - **GetAnomalies** - Detect performance anomalies in server metrics using AI-powered analysis of CPU and disk usage patterns
 
-These tools leverage Azure Resource Graph for infrastructure queries and Azure Monitor/Log Analytics for performance data analysis.
+These tools leverage Azure Resource Graph for infrastructure queries and Azure Monitor/Log Analytics for performance data analysis, providing comprehensive visibility into your Azure and hybrid cloud infrastructure.
 
 ## Prepare your local environment
 
-For local development, the function app uses managed identity authentication with Azure Storage to avoid key-based authentication. The infrastructure analysis tools require Azure CLI authentication to access Azure Resource Graph and Monitor APIs.
+For local development, the infrastructure analysis tools require Azure CLI authentication to access Azure Resource Graph and Monitor APIs.
 
 1. Ensure you're logged in to Azure CLI:
 
@@ -65,14 +63,10 @@ For local development, the function app uses managed identity authentication wit
     az login
     ```
 
-2. **Optional**: Start Azurite for local blob storage testing (if you want to test snippet functionality locally):
-
-    ```shell
-    docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 \
-        mcr.microsoft.com/azure-storage/azurite
-    ```
-
->**Note**: The infrastructure analysis tools work with live Azure resources and require proper Azure authentication and permissions. Local storage emulation is only needed for the snippet save/retrieve functionality.
+>**Note**: The infrastructure analysis tools work with live Azure resources and require proper Azure authentication and permissions including:
+> - `Microsoft.ResourceGraph/resources/read` permission for Resource Graph queries
+> - `Microsoft.OperationalInsights/workspaces/query/read` permission for Log Analytics queries
+> - Reader access to the subscriptions you want to analyze
 
 ## Run your MCP Server locally from the terminal
 
@@ -92,7 +86,8 @@ For local development, the function app uses managed identity authentication wit
    - `azure-identity` - For Azure authentication
    - `azure-mgmt-resourcegraph` - For querying Azure Resource Graph
    - `azure-monitor-query` - For Log Analytics queries
-   - `pandas` - For data processing
+   - `azure-functions` - For Azure Functions runtime
+   - `pandas` - For data processing and analysis
    - `python-dateutil` - For date/time handling
 
 >**Note** it is a best practice to create a Virtual Environment before doing the `pip install` to avoid dependency issues/collisions, or if you are running in CodeSpaces.  See [Python Environments in VS Code](https://code.visualstudio.com/docs/python/environments#_creating-environments) for more information.
@@ -116,40 +111,44 @@ For local development, the function app uses managed identity authentication wit
     ```
 
 1. **List MCP Servers** from command palette and start the server
-1. In Copilot chat agent mode enter a prompt to trigger the tool, e.g., select some code and enter this prompt
+1. In Copilot chat agent mode enter a prompt to trigger the Azure infrastructure analysis tools:
 
-    ```plaintext
-    Say Hello
-    ```
-
-    ```plaintext
-    Save this snippet as snippet1 
-    ```
-
-    ```plaintext
-    Retrieve snippet1 and apply to newFile.py
-    ```
-
-    **Try the new Azure infrastructure analysis tools:**
-
+    **Server Infrastructure Analysis:**
     ```plaintext
     Get server metadata for subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
     ```
 
+    **SQL Infrastructure Analysis:**
     ```plaintext
-    Analyze SQL infrastructure configuration for my Azure environment
+    Analyze SQL infrastructure configuration for subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    ```
+
+    **Patch Management:**
+    ```plaintext
+    Check for missing patches on all servers in subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    ```
+
+    **Best Practices Assessment:**
+    ```plaintext
+    Run SQL best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e for the last 30 days
     ```
 
     ```plaintext
-    Check for missing patches on all servers
+    Perform Windows Server best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    ```
+
+    **Software Configuration Tracking:**
+    ```plaintext
+    Show software configuration for server WIN-SERVER01 in workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
     ```
 
     ```plaintext
-    Run SQL best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    Track software changes for server WIN-SERVER01 in the last 7 days using workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
     ```
 
+    **Anomaly Detection:**
     ```plaintext
-    Detect performance anomalies in the last 7 days
+    Detect performance anomalies in workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e for the last 7 days
     ```
 
 1. When prompted to run the tool, consent by clicking **Continue**
@@ -176,34 +175,6 @@ For local development, the function app uses managed identity authentication wit
 
 5. **List Tools**.  Click on a tool and **Run Tool**.
 
-## Verify local blob storage in Azurite
-
-After testing the snippet save functionality locally, you can verify that blobs are being stored correctly in your local Azurite storage emulator.
-
-### Using Azure Storage Explorer
-
-1. Open Azure Storage Explorer
-1. In the left panel, expand **Emulator & Attached** → **Storage Accounts** → **(Emulator - Default Ports) (Key)**
-1. Navigate to **Blob Containers** → **snippets**
-1. You should see any saved snippets as blob files in this container
-1. Double-click on any blob to view its contents and verify the snippet data was saved correctly
-
-### Using Azure CLI (Alternative)
-
-If you prefer using the command line, you can also verify blobs using Azure CLI with the storage emulator:
-
-```shell
-# List blobs in the snippets container
-az storage blob list --container-name snippets --connection-string "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
-```
-
-```shell
-# Download a specific blob to view its contents
-az storage blob download --container-name snippets --name <blob-name> --file <local-file-path> --connection-string "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;"
-```
-
-This verification step ensures your MCP server is correctly interacting with the local storage emulator and that the blob storage functionality is working as expected before deploying to Azure.
-
 ## Deploy to Azure for Remote MCP
 
 Run this [azd](https://aka.ms/azd) command to provision the function app, with any required Azure resources, and deploy your code:
@@ -213,10 +184,12 @@ azd up
 ```
 
 **Recent Updates (August 4, 2025):**
-- Storage configuration updated to use LRS (Locally Redundant Storage) for broader region availability
+- Focused on Azure infrastructure analysis with comprehensive monitoring tools
+- Added advanced MCP functions for server metadata, SQL analysis, patch management, and best practices assessment  
+- Integrated software configuration tracking and change monitoring capabilities
+- Enhanced anomaly detection for performance monitoring
+- Azure SDK dependencies optimized for infrastructure analysis
 - Managed identity authentication enabled for enhanced security
-- Key-based storage authentication disabled as per security best practices
-- Added comprehensive Azure SDK dependencies for infrastructure analysis
 
 You can opt-in to a VNet being used in the sample. To do so, do this before `azd up`
 
@@ -336,16 +309,12 @@ azd deploy
 The function code for the MCP tools is defined in the Python files in the `src` directory. The MCP function annotations expose these functions as MCP Server tools.
 
 ### Core Files
-- **`function_app.py`** - Main Azure Function app with MCP tool definitions
-- **`agent_functions.py`** - Azure infrastructure analysis functions
+- **`function_app.py`** - Main Azure Function app with MCP tool wrapper functions
+- **`mcp_tools.py`** - Azure infrastructure analysis MCP tool implementations  
 - **`utils/`** - Utility classes for Azure Resource Graph and Log Analytics integration
   - `resource_graph_tool.py` - Azure Resource Graph query execution
   - `log_analytics_tool.py` - Log Analytics/Azure Monitor queries
   - `logging_decorators.py` - Logging and debugging utilities
-
-### Example Tool Implementation
-
-Here's an example of how the infrastructure analysis tools are implemented:
 
 ### Example Tool Implementation
 
@@ -373,47 +342,36 @@ def get_server_metadata_function(context) -> str:
         content = json.loads(context)
         subscription_ids = content["arguments"]["subscription_ids"]
         
-        # Call the agent function
-        result = GetServerMetadata(None, subscription_ids)
+        # Call the mcp_tools function
+        result = GetServerMetadata(subscription_ids)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_server_metadata_function: {str(e)}")
         return result
     except Exception as e:
         logging.error(f"Error in get_server_metadata_function: {str(e)}")
         return json.dumps({"error": str(e)})
 ```
 
-**Basic snippet management tools:**
+The underlying MCP tool function uses Azure Resource Graph to query server infrastructure:
 
 ```python
-@app.generic_trigger(arg_name="context", type="mcpToolTrigger", toolName="hello_mcp", 
-                     description="Hello world.", 
-                     toolProperties="[]")
-def hello_mcp(context) -> None:
-    """
-    A simple function that returns a greeting message.
-    """
-    return "Hello I am MCPTool!"
-
-
-@app.generic_trigger(
-    arg_name="context",
-    type="mcpToolTrigger",
-    toolName="get_snippet",
-    description="Retrieve a snippet by name.",
-    toolProperties=tool_properties_get_snippets_json
-)
-@app.generic_input_binding(
-    arg_name="file",
-    type="blob",
-    connection="AzureWebJobsStorage",
-    path=_BLOB_PATH
-)
-def get_snippet(file: func.InputStream, context) -> str:
-    """
-    Retrieves a snippet by name from Azure Blob Storage.
-    """
-    snippet_content = file.read().decode("utf-8")
-    logging.info(f"Retrieved snippet: {snippet_content}")
-    return snippet_content
+@log_function_call
+def GetServerMetadata(subscription_ids) -> str:
+    """Retrieve the server infrastructure configuration."""
+    
+    kql_query = """resources 
+    | where type == 'microsoft.hybridcompute/machines' 
+    | project name, type, location, resourceGroup, 
+              OsVersion=properties.osSku, 
+              processor=properties.detectedProperties.processorNames,
+              coreCount=properties.detectedProperties.logicalCoreCount,
+              RamGB=properties.detectedProperties.totalPhysicalMemoryInGigabytes,
+              subnet=properties.networkProfile.networkInterfaces[0].ipAddresses[0].address,
+              mssqlDiscovered=properties.mssqlDiscovered"""
+    
+    response = resource_graph_tool(kql_query, subscription_ids)
+    return response
 ```
 
 Note that the `host.json` file also includes a reference to the experimental bundle, which is required for apps using this feature:
@@ -435,15 +393,20 @@ Note that the `host.json` file also includes a reference to the experimental bun
 ## Changelog
 
 ### August 4, 2025
-- **Added Azure Infrastructure Analysis Tools**: Integrated 5 new MCP tools for comprehensive Azure infrastructure monitoring and analysis
-- **Enhanced Security**: Implemented managed identity authentication and disabled key-based storage access
-- **Storage Optimization**: Updated storage configuration to use LRS for broader regional availability
-- **Dependencies Update**: Added Azure SDK packages for Resource Graph and Monitor APIs
-- **Improved Documentation**: Updated README with comprehensive tool descriptions and usage examples
+- **Focused on Azure Infrastructure Analysis**: Streamlined the template to focus exclusively on powerful Azure infrastructure monitoring and analysis tools
+- **Enhanced MCP Tool Suite**: Now includes 8 comprehensive MCP tools for infrastructure analysis:
+  - Server metadata and configuration analysis
+  - SQL Server infrastructure and database monitoring  
+  - Patch management and security update tracking
+  - Windows and SQL best practices assessments
+  - Software configuration tracking and change monitoring
+  - Performance anomaly detection with AI-powered analysis
+- **Improved Security**: Implemented Azure CLI authentication for Resource Graph and Monitor API access
+- **Optimized Dependencies**: Updated Azure SDK packages for Resource Graph, Monitor APIs, and data processing
+- **Enhanced Documentation**: Comprehensive tool descriptions, usage examples, and architectural guidance
+- **Code Refactoring**: Consolidated agent functions into `mcp_tools.py` with improved error handling and logging
 
-### Tool Details Added:
-- **GetServerMetadata**: Server infrastructure analysis (OS, CPU, memory, network)
-- **GetSqlMetadata**: SQL Server configuration and database analysis
-- **GetPatchingLevel**: Security patch analysis and missing update identification
-- **GetSqlBpAssessment**: SQL Server best practices assessment via Log Analytics
-- **GetAnomalies**: AI-powered performance anomaly detection for server metrics
+### Removed Features:
+- Basic snippet management tools (hello_mcp, get_snippet, save_snippet) 
+- Azure Blob Storage dependencies for snippet functionality
+- Local Azurite storage emulator requirements
