@@ -268,7 +268,8 @@ The template can be deployed and configured with details similar to the followin
 
 ### Recent Fixes Applied:
 - ✅ **JSON Schema Validation**: Fixed MCP tool parameter validation errors by properly defining array type schemas with `items` specification
-- ✅ **Authentication**: Updated ResourceGraphTool to support credential injection for better Azure authentication
+- ✅ **User Authentication**: Updated authentication to prioritize user credentials over managed identity for flexible authentication
+- ✅ **Service Principal Setup**: Configured Azure Function with service principal credentials for user-controlled authentication
 - ✅ **Code Consolidation**: Migrated from `agent_functions.py` to comprehensive `mcp_tools.py` implementation
 - ✅ **Deployment**: Successfully deployed to Azure with proper function bindings and MCP integration
 
