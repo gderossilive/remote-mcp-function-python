@@ -7,6 +7,16 @@ from mcp_tools import (
     GetServerMetadata, GetSqlBpAssessment, GetSqlMetadata, GetPatchingLevel, GetAnomalies,
     GetSwChangesList, GetSwConfig, GetWinBpAssessment
 )
+from utils.log_config import setup_timestamped_logging, cleanup_old_logs, is_azure_function_environment
+
+# Initialize logging - custom logging only for local development
+log_file_path = setup_timestamped_logging(logging.INFO)
+if log_file_path:
+    logging.info(f"Local MCP development logging to: {log_file_path}")
+    # Clean up old log files (keep last 7 days) - only for local development
+    cleanup_old_logs(days_to_keep=7)
+else:
+    logging.info("Azure Function App started - using Azure's built-in logging")
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 

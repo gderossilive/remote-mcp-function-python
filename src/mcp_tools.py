@@ -12,7 +12,13 @@ import json
 import pandas as pd
 from typing import Annotated, List
 
-# Early logging suppression check
+# Import utilities first to set up logging
+from utils.log_config import setup_function_specific_logging, is_azure_function_environment
+from utils.logging_decorators import log_function_call
+from utils.log_analytics_tool import LogAnalyticsTool
+from utils.resource_graph_tool import ResourceGraphTool
+
+# Early logging suppression check - if not suppressed, use timestamped logging for local only
 if os.getenv('SUPPRESS_MCP_LOGGING', 'false').lower() == 'true':
     # Suppress this module and related modules immediately
     logging.getLogger(__name__).setLevel(logging.WARNING)
@@ -22,11 +28,14 @@ if os.getenv('SUPPRESS_MCP_LOGGING', 'false').lower() == 'true':
     logging.getLogger('azure').setLevel(logging.WARNING)
     logging.getLogger('azure.identity').setLevel(logging.WARNING)
     logging.getLogger('azure.monitor').setLevel(logging.WARNING)
+else:
+    # Set up timestamped logging for MCP tools (local development only)
+    mcp_logger, mcp_log_file = setup_function_specific_logging('mcp_tools', logging.INFO)
+    if mcp_log_file:
+        mcp_logger.info(f"Local MCP Tools logging initialized. Log file: {mcp_log_file}")
+    else:
+        mcp_logger.info("MCP Tools using Azure Functions built-in logging")
 
-# Import utilities
-from utils.logging_decorators import log_function_call
-from utils.log_analytics_tool import LogAnalyticsTool
-from utils.resource_graph_tool import ResourceGraphTool
 
 # Add Azure Identity imports for credential handling
 from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, EnvironmentCredential, AzureCliCredential, ChainedTokenCredential

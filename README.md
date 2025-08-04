@@ -322,6 +322,18 @@ The function code for the MCP tools is defined in the Python files in the `src` 
   - `resource_graph_tool.py` - Azure Resource Graph query execution
   - `log_analytics_tool.py` - Log Analytics/Azure Monitor queries
   - `logging_decorators.py` - Logging and debugging utilities
+  - `log_config.py` - Conditional logging system for local development
+
+### Logging System
+
+The project includes an intelligent logging system that automatically adapts to the environment:
+
+- **Local Development**: Creates timestamped log files in the `logs/` directory with all MCP tool activity consolidated into a single session file
+- **Azure Functions**: Uses Azure's built-in logging infrastructure without creating local files
+- **Environment Detection**: Automatically detects Azure Functions environment variables to determine logging mode
+- **Session-based**: All loggers in a single execution session write to the same timestamped file for easy debugging
+
+Example log file: `logs/mcp_session_20250804_123456_789.log`
 
 ### Example Tool Implementation
 
