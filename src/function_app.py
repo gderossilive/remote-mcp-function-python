@@ -1,7 +1,9 @@
 import json
 import logging
+import os
 
 import azure.functions as func
+from agent_functions import GetServerMetadata, GetSqlBpAssessment, GetSqlMetadata, GetPatchingLevel, GetAnomalies
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
@@ -36,6 +38,20 @@ tool_properties_get_snippets_object = [ToolProperty(_SNIPPET_NAME_PROPERTY_NAME,
 # Convert the tool properties to JSON
 tool_properties_save_snippets_json = json.dumps([prop.to_dict() for prop in tool_properties_save_snippets_object])
 tool_properties_get_snippets_json = json.dumps([prop.to_dict() for prop in tool_properties_get_snippets_object])
+
+# Tool properties for agent functions
+tool_properties_subscription_ids = [
+    ToolProperty("subscription_ids", "array", "List of Azure subscription IDs to query Azure Resource Manager against"),
+]
+
+tool_properties_log_analytics = [
+    ToolProperty("workspace_id", "string", "The workspace ID for the Log Analytics query."),
+    ToolProperty("timespan", "string", "The timespan for the query (e.g., '30d' for 30 days)"),
+]
+
+# Convert agent function tool properties to JSON
+tool_properties_subscription_ids_json = json.dumps([prop.to_dict() for prop in tool_properties_subscription_ids])
+tool_properties_log_analytics_json = json.dumps([prop.to_dict() for prop in tool_properties_log_analytics])
 
 
 @app.generic_trigger(
@@ -104,3 +120,150 @@ def save_snippet(file: func.Out[str], context) -> str:
     file.set(snippet_content_from_args)
     logging.info(f"Saved snippet: {snippet_content_from_args}")
     return f"Snippet '{snippet_content_from_args}' saved successfully"
+
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetServerMetadata",
+    description="Retrieve the server infrastructure configuration",
+    toolProperties=tool_properties_subscription_ids_json,
+)
+def get_server_metadata_function(context) -> str:
+    """
+    Azure Function wrapper for GetServerMetadata.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with server metadata.
+    """
+    try:
+        content = json.loads(context)
+        subscription_ids = content["arguments"]["subscription_ids"]
+        
+        # Call the agent function
+        result = GetServerMetadata(None, subscription_ids)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_server_metadata_function: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetSqlMetadata",
+    description="Retrieve the SQL infrastructure configuration",
+    toolProperties=tool_properties_subscription_ids_json,
+)
+def get_sql_metadata_function(context) -> str:
+    """
+    Azure Function wrapper for GetSqlMetadata.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with SQL metadata.
+    """
+    try:
+        content = json.loads(context)
+        subscription_ids = content["arguments"]["subscription_ids"]
+        
+        # Call the agent function
+        result = GetSqlMetadata(None, subscription_ids)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_sql_metadata_function: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetPatchingLevel",
+    description="Retrieve the missed patches list for the ServeName",
+    toolProperties=tool_properties_subscription_ids_json,
+)
+def get_patching_level_function(context) -> str:
+    """
+    Azure Function wrapper for GetPatchingLevel.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with patching information.
+    """
+    try:
+        content = json.loads(context)
+        subscription_ids = content["arguments"]["subscription_ids"]
+        
+        # Call the agent function
+        result = GetPatchingLevel(None, subscription_ids)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_patching_level_function: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetSqlBpAssessment",
+    description="Retrieve the SQL Server best practices assessment",
+    toolProperties=tool_properties_log_analytics_json,
+)
+def get_sql_bp_assessment_function(context) -> str:
+    """
+    Azure Function wrapper for GetSqlBpAssessment.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with SQL best practices assessment.
+    """
+    try:
+        content = json.loads(context)
+        workspace_id = content["arguments"]["workspace_id"]
+        timespan = content["arguments"].get("timespan")
+        
+        # Call the agent function
+        result = GetSqlBpAssessment(None, workspace_id, timespan)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_sql_bp_assessment_function: {str(e)}")
+        return json.dumps({"error": str(e)})
+
+
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetAnomalies",
+    description="Detect anomalies on the metrics behavior for your servers",
+    toolProperties=tool_properties_log_analytics_json,
+)
+def get_anomalies_function(context) -> str:
+    """
+    Azure Function wrapper for GetAnomalies.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with detected anomalies.
+    """
+    try:
+        content = json.loads(context)
+        workspace_id = content["arguments"]["workspace_id"]
+        timespan = content["arguments"].get("timespan")
+        
+        # Call the agent function
+        result = GetAnomalies(None, workspace_id, timespan)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_anomalies_function: {str(e)}")
+        return json.dumps({"error": str(e)})

@@ -2,6 +2,9 @@
     "IsEncrypted": false,
     "Values": {
       "FUNCTIONS_WORKER_RUNTIME": "python",
-      "AzureWebJobsStorage": "UseDevelopmentStorage=true"
+      "AzureWebJobsStorage__blobServiceUri": "https://stxjl3aapkjyz7k.blob.core.windows.net/",
+      "AzureWebJobsStorage__queueServiceUri": "https://stxjl3aapkjyz7k.queue.core.windows.net/",
+      "AzureWebJobsStorage__tableServiceUri": "https://stxjl3aapkjyz7k.table.core.windows.net/",
+      "SUBSCRIPTION_ID": "06dbbc7b-2363-4dd4-9803-95d07f1a8d3e"
     }
   }

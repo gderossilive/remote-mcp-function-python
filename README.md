@@ -18,6 +18,8 @@ urlFragment: remote-mcp-functions-python
 
 This is a quickstart template to easily build and deploy a custom remote MCP server to the cloud using Azure Functions with Python. You can clone/restore/run on your local machine with debugging, and `azd up` to have it in the cloud in a couple minutes. The MCP server is secured by design using keys and HTTPS, and allows more options for OAuth using built-in auth and/or [API Management](https://aka.ms/mcp-remote-apim-auth) as well as network isolation using VNET.
 
+**Updated August 4, 2025**: This template now includes advanced Azure infrastructure analysis tools with integrated MCP agent functions for server monitoring, SQL analysis, patch management, best practices assessment, and anomaly detection.
+
 If you're looking for this sample in more languages check out the [.NET/C#](https://github.com/Azure-Samples/remote-mcp-functions-dotnet) and [Node.js/TypeScript](https://github.com/Azure-Samples/remote-mcp-functions-typescript) versions.
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Azure-Samples/remote-mcp-functions-python)
@@ -35,18 +37,42 @@ Below is the architecture diagram for the Remote MCP Server using Azure Function
   + [Visual Studio Code](https://code.visualstudio.com/)
   + [Azure Functions extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 
+## Available MCP Tools
+
+This template includes several powerful MCP tools for Azure infrastructure analysis:
+
+### Basic Tools
+- **hello_mcp** - Simple greeting function for testing connectivity
+- **get_snippet** - Retrieve code snippets stored in Azure Blob Storage
+- **save_snippet** - Save code snippets to Azure Blob Storage
+
+### Azure Infrastructure Analysis Tools (New!)
+- **GetServerMetadata** - Retrieve comprehensive server infrastructure configuration including OS version, CPU details, memory, and network information
+- **GetSqlMetadata** - Analyze SQL Server infrastructure including database configurations, licensing, storage usage, and backup information
+- **GetPatchingLevel** - Identify missing patches and security updates across your server infrastructure with detailed metadata
+- **GetSqlBpAssessment** - Run SQL Server best practices assessment to identify configuration issues and improvement opportunities
+- **GetAnomalies** - Detect performance anomalies in server metrics using AI-powered analysis of CPU and disk usage patterns
+
+These tools leverage Azure Resource Graph for infrastructure queries and Azure Monitor/Log Analytics for performance data analysis.
+
 ## Prepare your local environment
 
-An Azure Storage Emulator is needed for this particular sample because we will save and get snippets from blob storage.
+For local development, the function app uses managed identity authentication with Azure Storage to avoid key-based authentication. The infrastructure analysis tools require Azure CLI authentication to access Azure Resource Graph and Monitor APIs.
 
-1. Start Azurite
+1. Ensure you're logged in to Azure CLI:
+
+    ```shell
+    az login
+    ```
+
+2. **Optional**: Start Azurite for local blob storage testing (if you want to test snippet functionality locally):
 
     ```shell
     docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 \
         mcr.microsoft.com/azure-storage/azurite
     ```
 
->**Note** if you use Azurite coming from VS Code extension you need to run `Azurite: Start` now or you will see errors.
+>**Note**: The infrastructure analysis tools work with live Azure resources and require proper Azure authentication and permissions. Local storage emulation is only needed for the snippet save/retrieve functionality.
 
 ## Run your MCP Server locally from the terminal
 
@@ -61,6 +87,13 @@ An Azure Storage Emulator is needed for this particular sample because we will s
    ```shell
    pip install -r requirements.txt
    ```
+
+   The following Azure SDK packages are included for the infrastructure analysis tools:
+   - `azure-identity` - For Azure authentication
+   - `azure-mgmt-resourcegraph` - For querying Azure Resource Graph
+   - `azure-monitor-query` - For Log Analytics queries
+   - `pandas` - For data processing
+   - `python-dateutil` - For date/time handling
 
 >**Note** it is a best practice to create a Virtual Environment before doing the `pip install` to avoid dependency issues/collisions, or if you are running in CodeSpaces.  See [Python Environments in VS Code](https://code.visualstudio.com/docs/python/environments#_creating-environments) for more information.
 
@@ -95,6 +128,28 @@ An Azure Storage Emulator is needed for this particular sample because we will s
 
     ```plaintext
     Retrieve snippet1 and apply to newFile.py
+    ```
+
+    **Try the new Azure infrastructure analysis tools:**
+
+    ```plaintext
+    Get server metadata for subscription 06dbbc7b-2363-4dd4-9803-95d07f1a8d3e
+    ```
+
+    ```plaintext
+    Analyze SQL infrastructure configuration for my Azure environment
+    ```
+
+    ```plaintext
+    Check for missing patches on all servers
+    ```
+
+    ```plaintext
+    Run SQL best practices assessment on workspace 93819b8e-f60e-40cf-8b96-9c9113b2b97e
+    ```
+
+    ```plaintext
+    Detect performance anomalies in the last 7 days
     ```
 
 1. When prompted to run the tool, consent by clicking **Continue**
@@ -156,6 +211,12 @@ Run this [azd](https://aka.ms/azd) command to provision the function app, with a
 ```shell
 azd up
 ```
+
+**Recent Updates (August 4, 2025):**
+- Storage configuration updated to use LRS (Locally Redundant Storage) for broader region availability
+- Managed identity authentication enabled for enhanced security
+- Key-based storage authentication disabled as per security best practices
+- Added comprehensive Azure SDK dependencies for infrastructure analysis
 
 You can opt-in to a VNet being used in the sample. To do so, do this before `azd up`
 
@@ -272,24 +333,63 @@ azd deploy
 
 ## Source Code
 
-The function code for the `get_snippet` and `save_snippet` endpoints are defined in the Python files in the `src` directory. The MCP function annotations expose these functions as MCP Server tools.
+The function code for the MCP tools is defined in the Python files in the `src` directory. The MCP function annotations expose these functions as MCP Server tools.
 
-Here's the actual code from the function_app.py file:
+### Core Files
+- **`function_app.py`** - Main Azure Function app with MCP tool definitions
+- **`agent_functions.py`** - Azure infrastructure analysis functions
+- **`utils/`** - Utility classes for Azure Resource Graph and Log Analytics integration
+  - `resource_graph_tool.py` - Azure Resource Graph query execution
+  - `log_analytics_tool.py` - Log Analytics/Azure Monitor queries
+  - `logging_decorators.py` - Logging and debugging utilities
+
+### Example Tool Implementation
+
+Here's an example of how the infrastructure analysis tools are implemented:
+
+### Example Tool Implementation
+
+Here's an example of how the infrastructure analysis tools are implemented:
 
 ```python
+@app.generic_trigger(
+    arg_name="context",
+    type="mcpToolTrigger",
+    toolName="GetServerMetadata",
+    description="Retrieve the server infrastructure configuration",
+    toolProperties=tool_properties_subscription_ids_json,
+)
+def get_server_metadata_function(context) -> str:
+    """
+    Azure Function wrapper for GetServerMetadata.
+    
+    Args:
+        context: The trigger context containing the input arguments.
+        
+    Returns:
+        str: JSON string with server metadata.
+    """
+    try:
+        content = json.loads(context)
+        subscription_ids = content["arguments"]["subscription_ids"]
+        
+        # Call the agent function
+        result = GetServerMetadata(None, subscription_ids)
+        return result
+    except Exception as e:
+        logging.error(f"Error in get_server_metadata_function: {str(e)}")
+        return json.dumps({"error": str(e)})
+```
 
-@app.generic_trigger(arg_name="context", type="mcpToolTrigger", toolName="hello", 
+**Basic snippet management tools:**
+
+```python
+@app.generic_trigger(arg_name="context", type="mcpToolTrigger", toolName="hello_mcp", 
                      description="Hello world.", 
                      toolProperties="[]")
 def hello_mcp(context) -> None:
     """
     A simple function that returns a greeting message.
-
-    Args:
-        context: The trigger context (not used in this function).
-
-    Returns:
-        str: A greeting message.
     """
     return "Hello I am MCPTool!"
 
@@ -297,7 +397,7 @@ def hello_mcp(context) -> None:
 @app.generic_trigger(
     arg_name="context",
     type="mcpToolTrigger",
-    toolName="getsnippet",
+    toolName="get_snippet",
     description="Retrieve a snippet by name.",
     toolProperties=tool_properties_get_snippets_json
 )
@@ -310,46 +410,10 @@ def hello_mcp(context) -> None:
 def get_snippet(file: func.InputStream, context) -> str:
     """
     Retrieves a snippet by name from Azure Blob Storage.
- 
-    Args:
-        file (func.InputStream): The input binding to read the snippet from Azure Blob Storage.
-        context: The trigger context containing the input arguments.
- 
-    Returns:
-        str: The content of the snippet or an error message.
     """
     snippet_content = file.read().decode("utf-8")
     logging.info(f"Retrieved snippet: {snippet_content}")
     return snippet_content
-
-
-@app.generic_trigger(
-    arg_name="context",
-    type="mcpToolTrigger",
-    toolName="savesnippet",
-    description="Save a snippet with a name.",
-    toolProperties=tool_properties_save_snippets_json
-)                   
-@app.generic_output_binding(
-    arg_name="file",
-    type="blob",
-    connection="AzureWebJobsStorage",
-    path=_BLOB_PATH
-)
-def save_snippet(file: func.Out[str], context) -> str:
-    content = json.loads(context)
-    snippet_name_from_args = content["arguments"][_SNIPPET_NAME_PROPERTY_NAME]
-    snippet_content_from_args = content["arguments"][_SNIPPET_PROPERTY_NAME]
-
-    if not snippet_name_from_args:
-        return "No snippet name provided"
-
-    if not snippet_content_from_args:
-        return "No snippet content provided"
- 
-    file.set(snippet_content_from_args)
-    logging.info(f"Saved snippet: {snippet_content_from_args}")
-    return f"Snippet '{snippet_content_from_args}' saved successfully"
 ```
 
 Note that the `host.json` file also includes a reference to the experimental bundle, which is required for apps using this feature:
@@ -367,3 +431,19 @@ Note that the `host.json` file also includes a reference to the experimental bun
 - Add [built-in auth](https://learn.microsoft.com/en-us/azure/app-service/overview-authentication-authorization) to your MCP server
 - Enable VNET using VNET_ENABLED=true flag
 - Learn more about [related MCP efforts from Microsoft](https://github.com/microsoft/mcp/tree/main/Resources)
+
+## Changelog
+
+### August 4, 2025
+- **Added Azure Infrastructure Analysis Tools**: Integrated 5 new MCP tools for comprehensive Azure infrastructure monitoring and analysis
+- **Enhanced Security**: Implemented managed identity authentication and disabled key-based storage access
+- **Storage Optimization**: Updated storage configuration to use LRS for broader regional availability
+- **Dependencies Update**: Added Azure SDK packages for Resource Graph and Monitor APIs
+- **Improved Documentation**: Updated README with comprehensive tool descriptions and usage examples
+
+### Tool Details Added:
+- **GetServerMetadata**: Server infrastructure analysis (OS, CPU, memory, network)
+- **GetSqlMetadata**: SQL Server configuration and database analysis
+- **GetPatchingLevel**: Security patch analysis and missing update identification
+- **GetSqlBpAssessment**: SQL Server best practices assessment via Log Analytics
+- **GetAnomalies**: AI-powered performance anomaly detection for server metrics

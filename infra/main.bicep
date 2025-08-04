@@ -133,6 +133,7 @@ module storage 'br/public:avm/res/storage/storage-account:0.8.3' = {
     allowBlobPublicAccess: false
     allowSharedKeyAccess: false // Disable local authentication methods as per policy
     dnsEndpointType: 'Standard'
+    skuName: 'Standard_LRS' // Using LRS for broader region availability
     publicNetworkAccess: vnetEnabled ? 'Disabled' : 'Enabled'
     networkAcls: vnetEnabled ? {
       defaultAction: 'Deny'
